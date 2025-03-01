@@ -1,0 +1,176 @@
+{
+  "name": "flex",
+  "displayName": "Flex Language Support",
+  "description": "Language support for Flex programming language",
+  "version": "0.2.0",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "publisher": "YourPublisherName",
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Formatters",
+    "Snippets"
+  ],
+  "activationEvents": [
+    "onLanguage:flex"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "flex",
+        "aliases": [
+          "Flex",
+          "flex"
+        ],
+        "extensions": [
+          ".lx",
+          ".flex",
+          ".fx"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "flex",
+        "scopeName": "source.flex",
+        "path": "./syntaxes/flex.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "flex",
+        "path": "./snippets/flex.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "flex.format",
+        "title": "Flex: Format Document"
+      },
+      {
+        "command": "flex.run",
+        "title": "Flex: Run Current File",
+        "icon": {
+          "light": "resources/light/run.svg",
+          "dark": "resources/dark/run.svg"
+        }
+      },
+      {
+        "command": "flex.lint",
+        "title": "Flex: Lint Current File"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "flex.run",
+          "when": "editorLangId == flex",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "flex.run",
+          "when": "editorLangId == flex",
+          "group": "1_run"
+        },
+        {
+          "command": "flex.format",
+          "when": "editorLangId == flex",
+          "group": "1_run"
+        },
+        {
+          "command": "flex.lint",
+          "when": "editorLangId == flex",
+          "group": "1_run"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "flex.run",
+        "key": "f5",
+        "mac": "f5",
+        "when": "editorLangId == flex"
+      },
+      {
+        "command": "flex.format",
+        "key": "alt+shift+f",
+        "mac": "alt+shift+f",
+        "when": "editorLangId == flex"
+      },
+      {
+        "command": "flex.lint",
+        "key": "alt+shift+l",
+        "mac": "alt+shift+l",
+        "when": "editorLangId == flex"
+      }
+    ],
+    "configuration": {
+      "title": "Flex",
+      "properties": {
+        "flex.linting.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable linting for Flex files"
+        },
+        "flex.formatting.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable automatic formatting for Flex files"
+        },
+        "flex.path": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Flex compiler/interpreter executable"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "lint": "eslint src --ext ts",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^7.2.0",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "^5.59.1",
+    "@typescript-eslint/parser": "^5.59.1",
+    "@vscode/test-electron": "^2.3.0",
+    "eslint": "^8.39.0",
+    "glob": "^8.1.0",
+    "mocha": "^10.2.0",
+    "typescript": "^5.0.4"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^7.0.0",
+    "vscode-languageserver": "^7.0.0",
+    "vscode-languageserver-textdocument": "^1.0.4"
+  },
+  "directories": {
+    "example": "examples"
+  },
+  "keywords": [
+    "flex",
+    "language",
+    "programming",
+    "syntax",
+    "highlighting"
+  ],
+  "author": "Flex Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/vscode-flex.git"
+  }
+}
