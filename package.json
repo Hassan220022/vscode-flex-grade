@@ -1,6 +1,6 @@
 {
-  "name": "vscode-flex",
-  "displayName": "Flex Language Support",
+  "name": "flex-language",
+  "displayName": "Flex Programming Language",
   "description": "Language support for the Flex programming language",
   "version": "0.2.0",
   "engines": {
