@@ -98,7 +98,7 @@
     "Import Statement": {
         "prefix": ["import", "geeb"],
         "body": [
-            "geeb \"${0:filename.lx}\""
+            "geeb \"${0:filename.lx|filename.flex|filename.fx}\""
         ],
         "description": "Import statement in Flex"
     },

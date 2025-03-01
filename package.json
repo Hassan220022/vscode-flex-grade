@@ -1,12 +1,12 @@
 {
-  "name": "flex",
+  "name": "vscode-flex",
   "displayName": "Flex Language Support",
-  "description": "Language support for Flex programming language",
+  "description": "Language support for the Flex programming language",
   "version": "0.2.0",
   "engines": {
     "vscode": "^1.74.0"
   },
-  "publisher": "YourPublisherName",
+  "publisher": "mikawi",
   "categories": [
     "Programming Languages",
     "Linters",
@@ -62,6 +62,74 @@
       {
         "command": "flex.lint",
         "title": "Flex: Lint Current File"
+      },
+      {
+        "command": "flex.extractVariable",
+        "title": "Flex: Extract to Variable"
+      },
+      {
+        "command": "flex.declareVariable",
+        "title": "Flex: Declare Variable"
+      },
+      {
+        "command": "flex.runWithAI",
+        "title": "Flex: Run with AI Error Handling",
+        "icon": {
+          "light": "resources/light/ai.svg",
+          "dark": "resources/dark/ai.svg"
+        }
+      },
+      {
+        "command": "flex.createNewFile",
+        "title": "Flex: Create New Flex File"
+      },
+      {
+        "command": "flex.goToDefinition",
+        "title": "Flex: Go to Definition"
+      },
+      {
+        "command": "flex.findReferences",
+        "title": "Flex: Find All References"
+      },
+      {
+        "command": "flex.runFile",
+        "title": "Run Flex File",
+        "icon": {
+          "light": "resources/light/run.svg",
+          "dark": "resources/dark/run.svg"
+        }
+      },
+      {
+        "command": "flex.stopRun",
+        "title": "Stop Flex Run",
+        "icon": {
+          "light": "resources/light/stop.svg",
+          "dark": "resources/dark/stop.svg"
+        }
+      },
+      {
+        "command": "flex.aiExplain",
+        "title": "Flex: Explain Code",
+        "icon": {
+          "light": "resources/light/ai.svg",
+          "dark": "resources/dark/ai.svg"
+        }
+      },
+      {
+        "command": "flex.aiGenerate",
+        "title": "Flex: Generate Code",
+        "icon": {
+          "light": "resources/light/ai.svg",
+          "dark": "resources/dark/ai.svg"
+        }
+      },
+      {
+        "command": "flex.aiTranslate",
+        "title": "Flex: Translate to Flex",
+        "icon": {
+          "light": "resources/light/ai.svg",
+          "dark": "resources/dark/ai.svg"
+        }
       }
     ],
     "menus": {
@@ -69,6 +137,21 @@
         {
           "command": "flex.run",
           "when": "editorLangId == flex",
+          "group": "navigation"
+        },
+        {
+          "command": "flex.runWithAI",
+          "when": "editorLangId == flex",
+          "group": "navigation"
+        },
+        {
+          "command": "flex.runFile",
+          "when": "editorLangId == flex",
+          "group": "navigation"
+        },
+        {
+          "command": "flex.stopRun",
+          "when": "flexRunning",
           "group": "navigation"
         }
       ],
@@ -87,6 +170,48 @@
           "command": "flex.lint",
           "when": "editorLangId == flex",
           "group": "1_run"
+        },
+        {
+          "command": "flex.extractVariable",
+          "when": "editorLangId == flex && editorHasSelection",
+          "group": "2_refactor"
+        },
+        {
+          "command": "flex.goToDefinition",
+          "when": "editorLangId == flex",
+          "group": "3_navigation"
+        },
+        {
+          "command": "flex.findReferences",
+          "when": "editorLangId == flex",
+          "group": "3_navigation"
+        },
+        {
+          "command": "flex.runFile",
+          "when": "editorLangId == flex",
+          "group": "flex"
+        },
+        {
+          "command": "flex.aiExplain",
+          "when": "editorLangId == flex && editorHasSelection",
+          "group": "flex"
+        },
+        {
+          "command": "flex.aiGenerate",
+          "when": "editorLangId == flex",
+          "group": "flex"
+        },
+        {
+          "command": "flex.aiTranslate",
+          "when": "editorHasSelection",
+          "group": "flex"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "flex.createNewFile",
+          "group": "navigation",
+          "when": "explorerResourceIsFolder"
         }
       ]
     },
@@ -108,6 +233,24 @@
         "key": "alt+shift+l",
         "mac": "alt+shift+l",
         "when": "editorLangId == flex"
+      },
+      {
+        "command": "flex.runWithAI",
+        "key": "ctrl+f5",
+        "mac": "cmd+f5",
+        "when": "editorLangId == flex"
+      },
+      {
+        "command": "flex.goToDefinition",
+        "key": "f12",
+        "mac": "f12",
+        "when": "editorLangId == flex"
+      },
+      {
+        "command": "flex.findReferences",
+        "key": "shift+f12",
+        "mac": "shift+f12",
+        "when": "editorLangId == flex"
       }
     ],
     "configuration": {
@@ -118,15 +261,66 @@
           "default": true,
           "description": "Enable or disable linting for Flex files"
         },
+        "flex.linting.maxNumberOfProblems": {
+          "type": "number",
+          "default": 100,
+          "description": "Maximum number of problems to report for a file"
+        },
+        "flex.linting.rules": {
+          "type": "object",
+          "default": {
+            "missingBraces": "warning",
+            "undefinedVariables": "warning",
+            "unusedVariables": "info",
+            "semicolons": "warning"
+          },
+          "description": "Configure severity levels for different linting rules"
+        },
         "flex.formatting.enable": {
           "type": "boolean",
           "default": true,
           "description": "Enable or disable automatic formatting for Flex files"
         },
+        "flex.formatting.indentSize": {
+          "type": "number",
+          "default": 4,
+          "description": "Number of spaces to use for indentation"
+        },
+        "flex.formatting.formatOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically format Flex files on save"
+        },
         "flex.path": {
           "type": "string",
           "default": "",
           "description": "Path to the Flex compiler/interpreter executable"
+        },
+        "flex.ai.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable AI-assisted error handling"
+        },
+        "flex.ai.model": {
+          "type": "string",
+          "enum": ["qwen", "openai"],
+          "default": "qwen",
+          "description": "AI model to use for error handling (qwen for local, openai for cloud)"
+        },
+        "flex.ai.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for OpenAI (only needed if using the openai model)"
+        },
+        "flex.debug.enable": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable or disable debug mode for the extension"
+        },
+        "flex.debug.verboseLogging": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable or disable verbose logging for debugging"
         }
       }
     }
@@ -171,6 +365,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/vscode-flex.git"
+    "url": "https://github.com/Hassan220022/vscode-flex.git"
   }
 }

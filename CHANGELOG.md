@@ -1,31 +1,33 @@
 # Change Log
 
-All notable changes to the "Flex Language Support" extension will be documented in this file.
+All notable changes to the "vscode-flex" extension will be documented in this file.
 
-## [0.2.0] - 2025-02-28
+## [0.2.0] - 2023-07-15
 
 ### Added
-- Hover support for Flex language elements
-- Document symbol provider for better code navigation
-- Code actions for quick fixes
-- Run button in the editor title bar
+- Go to Definition functionality for variables, functions, and parameters
+- Find References functionality to locate all usages of a symbol
+- Run and Stop commands with editor toolbar integration
+- AI-powered features:
+  - Explain Code: Get explanations for selected Flex code
+  - Generate Code: Generate Flex code from natural language descriptions
+  - Translate to Flex: Convert code from other languages to Flex
+- New icons for AI and run/stop functionality
+
+### Improved
+- Enhanced syntax highlighting for better code readability
+- Improved error diagnostics with more detailed messages
+- Better code completion with context-aware suggestions
 
 ### Fixed
-- Fixed language server errors for unhandled methods
-- Improved variable detection in commented code
-- Fixed false positive warnings in example files
-- Enhanced syntax highlighting for comments
+- Various bug fixes and performance improvements
 
-## [0.1.0] - 2025-02-28
+## [0.1.0] - 2023-06-01
 
 ### Added
-- Initial release
+- Initial release of the Flex language extension
 - Syntax highlighting for Flex language
-- Error detection and linting
-- Code formatting
-- Bracket matching and code folding
-- Snippets for common Flex code patterns
-- Command palette integration
-- Run Flex files directly from VS Code
-- Project navigation
-- Customizable settings
+- Basic code completion for keywords and built-in functions
+- Error diagnostics for common syntax errors
+- Hover information for symbols
+- Document symbols for outline view

@@ -106,10 +106,10 @@ nass userName = da5l()
 
 ```flex
 // English style
-import "math.lx"
+import "math.lx"  // .lx, .flex, or .fx extensions are all supported
 
 // Franco-Arabic style
-geeb "math.lx"
+geeb "math.lx"  // .lx, .flex, or .fx extensions are all supported
 ```
 
 ## Extension Features

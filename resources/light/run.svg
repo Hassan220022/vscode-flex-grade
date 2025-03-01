@@ -7,6 +7,10 @@
    version="1.1"
    xmlns="http://www.w3.org/2000/svg">
   <path
-     d="M 4,3 V 13 L 13,8 Z"
-     fill="#424242"/>
+     d="M4 3L12 8L4 13V3Z"
+     fill="#424242"
+     stroke="#424242"
+     stroke-width="1"
+     stroke-linecap="round"
+     stroke-linejoin="round"/>
 </svg>

@@ -20,7 +20,10 @@ import {
     SymbolKind,
     CodeActionParams,
     CodeAction,
-    CodeActionKind
+    CodeActionKind,
+    Definition,
+    ReferenceParams,
+    Location
 } from 'vscode-languageserver/node';
 
 import {
@@ -95,7 +98,7 @@ const flexDocumentation = new Map<string, string>([
     ['while', 'Flex while loop.\n\nUsage: while (condition) { ... }'],
     ['rg3', 'Return a value from a function.\n\nUsage: rg3 expression'],
     ['etb3', 'Print to the console.\n\nUsage: etb3(expression)'],
-    ['geeb', 'Import functionality from another file.\n\nUsage: geeb "filename.lx"'],
+    ['geeb', 'Import functionality from another file.\n\nUsage: geeb "filename.lx|filename.flex|filename.fx"'],
     ['rakm', 'Integer data type.\n\nUsage: rakm variableName = value'],
     ['kasr', 'Floating-point number data type.\n\nUsage: kasr variableName = value'],
     ['nass', 'String data type.\n\nUsage: nass variableName = "value"'],
@@ -103,6 +106,15 @@ const flexDocumentation = new Map<string, string>([
     ['dorg', 'List/Array data type.\n\nUsage: dorg variableName = [value1, value2, ...]'],
     ['true', 'Boolean true value'],
     ['false', 'Boolean false value']
+]);
+
+const flexBuiltinFunctionsDocumentation = new Map<string, string>([
+    ['print', 'Print to the console.\n\nUsage: print(expression)'],
+    ['etb3', 'Print to the console.\n\nUsage: etb3(expression)'],
+    ['geeb', 'Import functionality from another file.\n\nUsage: geeb "filename.lx|filename.flex|filename.fx"'],
+    ['rakm', 'Integer data type.\n\nUsage: rakm variableName = value'],
+    ['da5l', 'Gets input from the user.\n\nUsage: da5l'],
+    ['input', 'Gets input from the user.\n\nUsage: input']
 ]);
 
 connection.onInitialize((params: InitializeParams) => {
@@ -128,21 +140,22 @@ connection.onInitialize((params: InitializeParams) => {
     const result: InitializeResult = {
         capabilities: {
             textDocumentSync: TextDocumentSyncKind.Incremental,
-            // Support hover
-            hoverProvider: true,
-            // Support code completion
+            // Tell the client that this server supports code completion
             completionProvider: {
                 resolveProvider: true,
                 triggerCharacters: ['.']
             },
-            // Support document symbols
+            // Add definition provider capability
+            definitionProvider: true,
+            // Add references provider capability
+            referencesProvider: true,
+            // Add hover provider capability
+            hoverProvider: true,
+            // Add document symbol provider capability
             documentSymbolProvider: true,
-            // Support code actions
+            // Add code action provider capability
             codeActionProvider: {
-                codeActionKinds: [
-                    CodeActionKind.QuickFix,
-                    CodeActionKind.Refactor
-                ]
+                codeActionKinds: [CodeActionKind.QuickFix]
             }
         }
     };
@@ -220,11 +233,244 @@ documents.onDidClose(e => {
     documentSymbols.delete(e.document.uri);
 });
 
+// Track symbol definitions and references
+interface SymbolDefinition {
+    name: string;
+    kind: 'variable' | 'function' | 'parameter';
+    range: Range;
+    uri: string;
+    references: Range[];
+}
+
+// Store symbol definitions per document
+const documentSymbolDefinitions = new Map<string, SymbolDefinition[]>();
+
+// Update symbol definitions for a document
+function updateSymbolDefinitions(document: TextDocument): void {
+    const text = document.getText();
+    const lines = text.split(/\r?\n/);
+    const uri = document.uri;
+    
+    const symbols: SymbolDefinition[] = [];
+    
+    // Track if we're inside a function declaration
+    let currentFunction: SymbolDefinition | null = null;
+    
+    // Process each line
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Skip comments
+        if (line.trim().startsWith('//')) {
+            continue;
+        }
+        
+        // Check for function declarations
+        const funcMatch = line.match(/\b(fun|sndo2)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/);
+        if (funcMatch) {
+            const funcName = funcMatch[2];
+            const startChar = line.indexOf(funcName);
+            
+            currentFunction = {
+                name: funcName,
+                kind: 'function',
+                range: {
+                    start: { line: i, character: startChar },
+                    end: { line: i, character: startChar + funcName.length }
+                },
+                uri,
+                references: []
+            };
+            
+            symbols.push(currentFunction);
+            
+            // Extract parameters
+            const paramSection = line.substring(line.indexOf('(') + 1);
+            const paramEnd = paramSection.indexOf(')');
+            if (paramEnd !== -1) {
+                const params = paramSection.substring(0, paramEnd).split(',');
+                
+                for (const param of params) {
+                    const paramMatch = param.trim().match(/(?:(int|rakm|float|kasr|string|nass|bool|so2al|list|dorg)\s+)?([a-zA-Z_][a-zA-Z0-9_]*)/);
+                    if (paramMatch) {
+                        const paramName = paramMatch[2];
+                        const paramStartChar = line.indexOf(paramName);
+                        
+                        symbols.push({
+                            name: paramName,
+                            kind: 'parameter',
+                            range: {
+                                start: { line: i, character: paramStartChar },
+                                end: { line: i, character: paramStartChar + paramName.length }
+                            },
+                            uri,
+                            references: []
+                        });
+                    }
+                }
+            }
+        }
+        
+        // Check for variable declarations
+        const varMatch = line.match(/\b(int|rakm|float|kasr|string|nass|bool|so2al|list|dorg)\s+([a-zA-Z_][a-zA-Z0-9_]*)\b/);
+        if (varMatch) {
+            const varName = varMatch[2];
+            const startChar = line.indexOf(varName);
+            
+            symbols.push({
+                name: varName,
+                kind: 'variable',
+                range: {
+                    start: { line: i, character: startChar },
+                    end: { line: i, character: startChar + varName.length }
+                },
+                uri,
+                references: []
+            });
+        }
+        
+        // Check for variable assignments without type (inferred type)
+        const assignMatch = line.match(/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*=/);
+        if (assignMatch && !varMatch) { // Only if not already matched as a typed variable
+            const varName = assignMatch[1];
+            const startChar = line.indexOf(varName);
+            
+            // Skip if it's a known keyword
+            if (flexKeywords.includes(varName) || flexTypes.includes(varName) || flexBuiltinFunctions.includes(varName)) {
+                continue;
+            }
+            
+            // Check if this variable is already defined
+            const existingVar = symbols.find(s => s.name === varName && s.kind === 'variable');
+            if (!existingVar) {
+                symbols.push({
+                    name: varName,
+                    kind: 'variable',
+                    range: {
+                        start: { line: i, character: startChar },
+                        end: { line: i, character: startChar + varName.length }
+                    },
+                    uri,
+                    references: []
+                });
+            }
+        }
+    }
+    
+    // Find references for all symbols
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Skip comments
+        if (line.trim().startsWith('//')) {
+            continue;
+        }
+        
+        // Check each symbol
+        for (const symbol of symbols) {
+            const pattern = new RegExp(`\\b${symbol.name}\\b`, 'g');
+            let match;
+            
+            while ((match = pattern.exec(line)) !== null) {
+                const startChar = match.index;
+                
+                // Skip if this is the definition itself
+                if (i === symbol.range.start.line && startChar === symbol.range.start.character) {
+                    continue;
+                }
+                
+                // Add as a reference
+                symbol.references.push({
+                    start: { line: i, character: startChar },
+                    end: { line: i, character: startChar + symbol.name.length }
+                });
+            }
+        }
+    }
+    
+    // Store the symbols
+    documentSymbolDefinitions.set(uri, symbols);
+}
+
+// Handle definition requests
+connection.onDefinition((params: TextDocumentPositionParams): Definition | null => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) {
+        return null;
+    }
+    
+    // Get the word at the position
+    const wordRange = getWordRangeAtPosition(document, params.position);
+    if (!wordRange) {
+        return null;
+    }
+    
+    const word = document.getText(wordRange);
+    
+    // Get the symbols for this document
+    const symbols = documentSymbolDefinitions.get(params.textDocument.uri) || [];
+    
+    // Find the symbol definition
+    const symbol = symbols.find(s => s.name === word);
+    if (symbol) {
+        return {
+            uri: symbol.uri,
+            range: symbol.range
+        };
+    }
+    
+    return null;
+});
+
+// Handle references requests
+connection.onReferences((params: ReferenceParams): Location[] => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) {
+        return [];
+    }
+    
+    // Get the word at the position
+    const wordRange = getWordRangeAtPosition(document, params.position);
+    if (!wordRange) {
+        return [];
+    }
+    
+    const word = document.getText(wordRange);
+    
+    // Get the symbols for this document
+    const symbols = documentSymbolDefinitions.get(params.textDocument.uri) || [];
+    
+    // Find the symbol
+    const symbol = symbols.find(s => s.name === word);
+    if (!symbol) {
+        return [];
+    }
+    
+    // Create locations for the definition and all references
+    const locations: Location[] = [
+        {
+            uri: symbol.uri,
+            range: symbol.range
+        }
+    ];
+    
+    // Add all references
+    for (const refRange of symbol.references) {
+        locations.push({
+            uri: symbol.uri,
+            range: refRange
+        });
+    }
+    
+    return locations;
+});
+
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
-    validateTextDocument(change.document);
     updateDocumentSymbols(change.document);
+    updateSymbolDefinitions(change.document);
+    validateTextDocument(change.document);
 });
 
 // Implement hover support
@@ -305,29 +551,42 @@ function findSymbol(symbols: FlexDocumentSymbol[], name: string): FlexDocumentSy
     return undefined;
 }
 
-// Helper to get word range at position
+// Helper function to get the word range at a position
 function getWordRangeAtPosition(document: TextDocument, position: Position): Range | null {
-    const line = document.getText({
-        start: { line: position.line, character: 0 },
-        end: { line: position.line + 1, character: 0 }
-    });
+    const text = document.getText();
+    const lines = text.split(/\r?\n/);
     
-    const wordPattern = /[a-zA-Z_][a-zA-Z0-9_]*/g;
-    let match: RegExpExecArray | null;
-    
-    while ((match = wordPattern.exec(line)) !== null) {
-        const start = match.index;
-        const end = start + match[0].length;
-        
-        if (position.character >= start && position.character <= end) {
-            return {
-                start: { line: position.line, character: start },
-                end: { line: position.line, character: end }
-            };
-        }
+    if (position.line >= lines.length) {
+        return null;
     }
     
-    return null;
+    const line = lines[position.line];
+    
+    if (position.character >= line.length) {
+        return null;
+    }
+    
+    // Find the start of the word
+    let start = position.character;
+    while (start > 0 && /[a-zA-Z0-9_]/.test(line[start - 1])) {
+        start--;
+    }
+    
+    // Find the end of the word
+    let end = position.character;
+    while (end < line.length && /[a-zA-Z0-9_]/.test(line[end])) {
+        end++;
+    }
+    
+    // If the cursor is not on a word, return null
+    if (start === end) {
+        return null;
+    }
+    
+    return {
+        start: { line: position.line, character: start },
+        end: { line: position.line, character: end }
+    };
 }
 
 // Implement document symbol provider
@@ -624,181 +883,120 @@ connection.onNotification('flex/lint', () => {
 
 // Validate document for diagnostics
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
-    // Get the document settings
+    // Get the text of the document
+    const text = textDocument.getText();
     const settings = await getDocumentSettings(textDocument.uri);
     
-    // Check if linting is enabled
+    // Skip validation if linting is disabled
     if (!settings.linting.enable) {
         connection.sendDiagnostics({ uri: textDocument.uri, diagnostics: [] });
         return;
     }
     
-    const text = textDocument.getText();
-    const problems: Diagnostic[] = [];
-    const lines = text.split(/\r?\n/);
+    const maxNumberOfProblems = settings.linting.maxNumberOfProblems || 100;
+    const diagnostics: Diagnostic[] = [];
     
-    // Example linting rules for Flex
+    // Track line and character positions
+    let lines = text.split(/\r?\n/);
     
-    // 1. Check for missing semicolons (since Flex doesn't use them)
-    const semicolonPattern = /;[ \t]*$/;
-    lines.forEach((line, i) => {
-        const match = semicolonPattern.exec(line);
-        if (match) {
-            const diagnostic: Diagnostic = {
-                severity: DiagnosticSeverity.Warning,
-                range: {
-                    start: { line: i, character: match.index },
-                    end: { line: i, character: match.index + 1 }
-                },
-                message: `Flex doesn't require semicolons at the end of lines.`,
-                source: 'flex-linter'
-            };
-            
-            problems.push(diagnostic);
-        }
-    });
-    
-    // 2. Check for unbalanced brackets
-    const openBrackets: Array<{ char: string, line: number, col: number }> = [];
-    const bracketPairs: { [key: string]: string } = {
-        '(': ')',
+    // Track brace/bracket/parenthesis matching
+    const openBraces: { char: string, line: number, character: number }[] = [];
+    const bracePairs: { [key: string]: string } = {
+        '{': '}',
         '[': ']',
-        '{': '}'
+        '(': ')'
     };
     
-    for (let i = 0; i < lines.length; i++) {
+    // Track variable declarations and usages
+    const declaredVariables = new Set<string>();
+    const usedVariables = new Set<string>();
+    
+    // Track function declarations and calls
+    const declaredFunctions = new Set<string>();
+    const calledFunctions = new Set<string>();
+    
+    // Track if we're inside a multiline comment
+    let inMultilineComment = false;
+    
+    // Process each line
+    for (let i = 0; i < lines.length && diagnostics.length < maxNumberOfProblems; i++) {
         const line = lines[i];
+        
+        // Skip processing if we're in a multiline comment
+        if (inMultilineComment) {
+            const commentEndIndex = line.indexOf('*/');
+            if (commentEndIndex !== -1) {
+                inMultilineComment = false;
+            }
+            continue;
+        }
+        
+        // Check for multiline comment start
+        const commentStartIndex = line.indexOf('/*');
+        if (commentStartIndex !== -1) {
+            const commentEndIndex = line.indexOf('*/', commentStartIndex + 2);
+            if (commentEndIndex === -1) {
+                inMultilineComment = true;
+            }
+            continue;
+        }
+        
+        // Skip single-line comments
+        if (line.trim().startsWith('//')) {
+            continue;
+        }
+        
+        // Process each character for brace matching
         for (let j = 0; j < line.length; j++) {
             const char = line[j];
             
-            // Check for opening brackets
-            if (char === '(' || char === '[' || char === '{') {
-                openBrackets.push({ char, line: i, col: j });
+            // Check for opening braces
+            if ('{[('.includes(char)) {
+                openBraces.push({ char, line: i, character: j });
             }
-            
-            // Check for closing brackets
-            if (char === ')' || char === ']' || char === '}') {
-                const matchingOpenChar = Object.entries(bracketPairs)
-                    .find(([_, closeChar]) => closeChar === char)?.[0];
-                
-                if (matchingOpenChar) {
-                    if (openBrackets.length === 0 || openBrackets[openBrackets.length - 1].char !== matchingOpenChar) {
-                        // Unmatched closing bracket
-                        const diagnostic: Diagnostic = {
+            // Check for closing braces
+            else if ('}])'.includes(char)) {
+                if (openBraces.length === 0) {
+                    // Unmatched closing brace
+                    diagnostics.push({
+                        severity: DiagnosticSeverity.Error,
+                        range: {
+                            start: { line: i, character: j },
+                            end: { line: i, character: j + 1 }
+                        },
+                        message: `Unmatched closing '${char}'`,
+                        source: 'flex-linter'
+                    });
+                } else {
+                    const lastBrace = openBraces.pop()!;
+                    const expectedClosing = bracePairs[lastBrace.char];
+                    
+                    if (char !== expectedClosing) {
+                        // Mismatched closing brace
+                        diagnostics.push({
                             severity: DiagnosticSeverity.Error,
                             range: {
                                 start: { line: i, character: j },
                                 end: { line: i, character: j + 1 }
                             },
-                            message: `Unmatched closing bracket '${char}'.`,
-                            source: 'flex-linter'
-                        };
-                        
-                        problems.push(diagnostic);
-                    } else {
-                        // Matched bracket, remove from stack
-                        openBrackets.pop();
+                            message: `Mismatched closing brace. Expected '${expectedClosing}' but found '${char}'`,
+                            source: 'flex-linter',
+                            relatedInformation: hasDiagnosticRelatedInformationCapability ? [
+                                {
+                                    location: {
+                                        uri: textDocument.uri,
+                                        range: {
+                                            start: { line: lastBrace.line, character: lastBrace.character },
+                                            end: { line: lastBrace.line, character: lastBrace.character + 1 }
+                                        }
+                                    },
+                                    message: `Opening '${lastBrace.char}' is here`
+                                }
+                            ] : []
+                        });
                     }
                 }
             }
         }
     }
-    
-    // Check for unmatched opening brackets
-    openBrackets.forEach(bracket => {
-        const diagnostic: Diagnostic = {
-            severity: DiagnosticSeverity.Error,
-            range: {
-                start: { line: bracket.line, character: bracket.col },
-                end: { line: bracket.line, character: bracket.col + 1 }
-            },
-            message: `Unmatched opening bracket '${bracket.char}'.`,
-            source: 'flex-linter'
-        };
-        
-        problems.push(diagnostic);
-    });
-    
-    // 3. Check for undefined variables (simplified)
-    const variableUsagePattern = /\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g;
-    const declaredVariables = new Set<string>();
-    
-    // Get the cached variables
-    const cachedVars = documentVariables.get(textDocument.uri);
-    if (cachedVars) {
-        // Use cached variables
-        cachedVars.forEach(v => declaredVariables.add(v));
-    } else {
-        // First pass: collect variable declarations
-        lines.forEach(line => {
-            const match = variableDeclarationPattern.exec(line);
-            if (match) {
-                declaredVariables.add(match[1]);
-            }
-            
-            // Check for commented variable declarations
-            const commentedMatch = commentedVariablePattern.exec(line);
-            if (commentedMatch) {
-                declaredVariables.add(commentedMatch[1]);
-            }
-        });
-    }
-    
-    // Define special variables from the test file that should be recognized
-    const specialTestVariables = [
-        'number', 'decimal', 'message', 'isValid', 'items', 'i', 'n', 
-        'userName', 'length', 'width', 'area', 'factorial', 'calculateArea'
-    ];
-    
-    // Add special test variables to declared variables list
-    specialTestVariables.forEach(variable => declaredVariables.add(variable));
-    
-    // Add built-in functions to declared variables
-    flexBuiltinFunctions.forEach(func => declaredVariables.add(func));
-    flexKeywords.forEach(keyword => declaredVariables.add(keyword));
-    
-    // Second pass: check for usage of undeclared variables
-    lines.forEach((line, i) => {
-        let match;
-        // Reset regex state between lines
-        variableUsagePattern.lastIndex = 0;
-        
-        // Skip variable checking for test_program.lx file
-        if (textDocument.uri.endsWith('test_program.lx')) {
-            return;
-        }
-        
-        while ((match = variableUsagePattern.exec(line)) !== null) {
-            const varName = match[1];
-            
-            // Skip keywords and types
-            if (flexKeywords.includes(varName) || flexTypes.includes(varName)) {
-                continue;
-            }
-            
-            // Check if variable is declared
-            if (!declaredVariables.has(varName)) {
-                const diagnostic: Diagnostic = {
-                    severity: DiagnosticSeverity.Warning,
-                    range: {
-                        start: { line: i, character: match.index },
-                        end: { line: i, character: match.index + varName.length }
-                    },
-                    message: `Variable '${varName}' might not be declared.`,
-                    source: 'flex-linter'
-                };
-                
-                problems.push(diagnostic);
-            }
-        }
-    });
-    
-    // Send the computed diagnostics to the client
-    connection.sendDiagnostics({ uri: textDocument.uri, diagnostics: problems });
 }
-
-// Make the connection listen on the TextDocument content
-documents.listen(connection);
-
-// Listen on the connection
-connection.listen();
