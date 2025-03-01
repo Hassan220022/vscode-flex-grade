@@ -189,8 +189,10 @@ function registerCommands(context: ExtensionContext) {
         let flexPath = config.get<string>('path', '');
         
         if (!flexPath) {
-            // Try to find flex.sh in the Sindbad directory
-            const defaultPath = path.join(path.dirname(path.dirname(context.extensionPath)), 'src', 'flex.sh');
+            // Try to find the appropriate script based on OS
+            const isWindows = process.platform === 'win32';
+            const scriptName = isWindows ? 'flex.bat' : 'flex.sh';
+            const defaultPath = path.join(path.dirname(path.dirname(context.extensionPath)), 'src', scriptName);
             
             if (fs.existsSync(defaultPath)) {
                 flexPath = defaultPath;
@@ -217,9 +219,18 @@ function registerCommands(context: ExtensionContext) {
         // Create a terminal and run the Flex file
         const terminal = window.createTerminal('Flex Run');
         
-        // Set the USE_AI environment variable to true for better error handling
-        terminal.sendText('export USE_AI=true');
-        terminal.sendText(`${flexPath} ${editor.document.fileName}`);
+        // Set environment variables based on OS
+        const isWindows = process.platform === 'win32';
+        if (isWindows) {
+            terminal.sendText('set USE_AI=true');
+            terminal.sendText('set FLEX_AI_MODEL=qwen');
+        } else {
+            terminal.sendText('export USE_AI=true');
+            terminal.sendText('export FLEX_AI_MODEL=qwen');
+        }
+        
+        // Run the Flex file
+        terminal.sendText(`${flexPath} "${editor.document.fileName}"`);
         terminal.show();
     }));
     
@@ -253,24 +264,46 @@ function registerCommands(context: ExtensionContext) {
         // Create a terminal and run the Flex file with AI enabled
         const terminal = window.createTerminal('Flex Run with AI');
         
-        // Set the USE_AI environment variable to true for better error handling
-        terminal.sendText('export USE_AI=true');
+        // Detect OS
+        const isWindows = process.platform === 'win32';
         
-        // Set the AI model based on user settings
-        const aiModel = config.get<string>('ai.model', 'qwen');
-        terminal.sendText(`export FLEX_AI_MODEL=${aiModel}`);
-        
-        // If using OpenAI, set the API key
-        if (aiModel === 'openai') {
-            const apiKey = config.get<string>('ai.apiKey', '');
-            if (!apiKey) {
-                window.showWarningMessage('OpenAI API key not set. Please set it in the settings.');
-            } else {
-                terminal.sendText(`export OPENAI_API_KEY=${apiKey}`);
+        // Set environment variables based on OS
+        if (isWindows) {
+            terminal.sendText('set USE_AI=true');
+            
+            // Set the AI model based on user settings
+            const aiModel = config.get<string>('ai.model', 'qwen');
+            terminal.sendText(`set FLEX_AI_MODEL=${aiModel}`);
+            
+            // If using OpenAI, set the API key
+            if (aiModel === 'openai') {
+                const apiKey = config.get<string>('ai.apiKey', '');
+                if (!apiKey) {
+                    window.showWarningMessage('OpenAI API key not set. Please set it in the settings.');
+                } else {
+                    terminal.sendText(`set OPENAI_API_KEY=${apiKey}`);
+                }
+            }
+        } else {
+            terminal.sendText('export USE_AI=true');
+            
+            // Set the AI model based on user settings
+            const aiModel = config.get<string>('ai.model', 'qwen');
+            terminal.sendText(`export FLEX_AI_MODEL=${aiModel}`);
+            
+            // If using OpenAI, set the API key
+            if (aiModel === 'openai') {
+                const apiKey = config.get<string>('ai.apiKey', '');
+                if (!apiKey) {
+                    window.showWarningMessage('OpenAI API key not set. Please set it in the settings.');
+                } else {
+                    terminal.sendText(`export OPENAI_API_KEY=${apiKey}`);
+                }
             }
         }
         
-        terminal.sendText(`${flexPath} ${editor.document.fileName}`);
+        // Run the Flex file
+        terminal.sendText(`${flexPath} "${editor.document.fileName}"`);
         terminal.show();
     }));
 
@@ -938,6 +971,15 @@ function registerRunCommands(context: vscode.ExtensionContext) {
         }
 
         try {
+            // Get Flex executable path from settings
+            const config = vscode.workspace.getConfiguration('flex');
+            let flexPath = config.get<string>('path', '');
+            
+            if (!flexPath) {
+                vscode.window.showErrorMessage('Flex path not set. Please set it in the settings or run the regular run command first.');
+                return;
+            }
+            
             // Create a new terminal or reuse existing one
             if (!runningTerminal) {
                 runningTerminal = vscode.window.createTerminal('Flex Run');
@@ -948,44 +990,27 @@ function registerRunCommands(context: vscode.ExtensionContext) {
             // Clear the terminal (if supported by the terminal)
             runningTerminal.sendText('clear || cls');
             
-            // Run the file using the Flex interpreter
-            // This is a placeholder. In a real implementation, you would use the actual Flex interpreter
-            runningTerminal.sendText(`echo "Running ${path.basename(filePath)}..."`);
-            runningTerminal.sendText(`echo "This is a simulated run. In a real implementation, you would use the actual Flex interpreter."`);
-            runningTerminal.sendText(`echo ""`);
+            // Detect OS
+            const isWindows = process.platform === 'win32';
             
-            // Read the file content and display it
-            const fileContent = fs.readFileSync(filePath, 'utf8');
-            const lines = fileContent.split('\n');
-            
-            // Simulate running the program
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (line.startsWith('print')) {
-                    // Extract the content inside the print statement
-                    const match = line.match(/print\s*\(\s*"([^"]*)"\s*\)/);
-                    if (match) {
-                        runningTerminal.sendText(`echo "${match[1]}"`);
-                    }
-                }
+            // Set environment variables based on OS
+            if (isWindows) {
+                runningTerminal.sendText('set USE_AI=true');
+                runningTerminal.sendText('set FLEX_AI_MODEL=qwen');
+            } else {
+                runningTerminal.sendText('export USE_AI=true');
+                runningTerminal.sendText('export FLEX_AI_MODEL=qwen');
             }
+            
+            // Run the file using the Flex interpreter
+            runningTerminal.sendText(`${flexPath} "${filePath}"`);
             
             // Set context to show the stop button
             vscode.commands.executeCommand('setContext', 'flexRunning', true);
             runningStatusBarItem.show();
             
-            // Create a timeout to simulate the program running
-            setTimeout(() => {
-                if (runningTerminal) {
-                    runningTerminal.sendText(`echo ""`);
-                    runningTerminal.sendText(`echo "Program execution completed."`);
-                }
-                
-                // Reset the running state
-                vscode.commands.executeCommand('setContext', 'flexRunning', false);
-                runningStatusBarItem.hide();
-                runningProcess = undefined;
-            }, 5000);
+            // We don't have a direct way to track when the process completes in the terminal
+            // So we'll keep the stop button visible until the user explicitly stops it
             
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to run Flex file: ${error}`);
@@ -1006,8 +1031,21 @@ function registerRunCommands(context: vscode.ExtensionContext) {
         }
         
         if (runningTerminal) {
-            runningTerminal.sendText(`echo ""`);
-            runningTerminal.sendText(`echo "Program execution stopped by user."`);
+            // Detect OS
+            const isWindows = process.platform === 'win32';
+            
+            // Send appropriate kill command based on OS
+            if (isWindows) {
+                // On Windows, we can use taskkill to forcefully terminate processes
+                runningTerminal.sendText('taskkill /F /IM python.exe /T');
+                runningTerminal.sendText('echo.');
+                runningTerminal.sendText('echo Program execution stopped by user.');
+            } else {
+                // On Unix-like systems, we can use pkill or killall
+                runningTerminal.sendText('pkill -f "python3 main.py" || killall -9 python3');
+                runningTerminal.sendText('echo ""');
+                runningTerminal.sendText('echo "Program execution stopped by user."');
+            }
         }
         
         // Reset the running state

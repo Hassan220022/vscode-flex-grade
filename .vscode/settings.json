@@ -1,0 +1,5 @@
+{
+    "flex.path": "${workspaceFolder}/run-flex.js",
+    "flex.ai.model": "qwen",
+    "flex.ai.enable": true
+} 
