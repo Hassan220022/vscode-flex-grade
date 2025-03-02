@@ -1,11 +1,10 @@
 #!/bin/bash
 
-# Get the absolute path of the input file
-INPUT_FILE="$1"
-ABSOLUTE_PATH=$(realpath "$INPUT_FILE")
+# Path to the Sindbad directory
+SINDBAD_DIR="/Users/mikawi/Developer/python/grad/Sindbad/src"
 
 # Change to the Sindbad/src directory
-cd /Users/mikawi/Developer/python/grad/Sindbad/src
+cd "$SINDBAD_DIR"
 
 # Run the Flex interpreter with the absolute path
-python3 main.py "$ABSOLUTE_PATH" 
+python3 main.py "/Users/mikawi/Developer/vscode-flex/examples/demo.flex"

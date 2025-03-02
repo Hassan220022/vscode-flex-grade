@@ -91,7 +91,7 @@ const documentVariables = new Map<string, Set<string>>();
 const documentSymbols = new Map<string, FlexDocumentSymbol[]>();
 
 // Documentation for Flex constructs
-const flexDocumentation = new Map<string, string>([
+const flexKeywordsDocumentation = new Map<string, string>([
     ['fun', 'Flex function definition keyword.\n\nUsage: fun functionName(parameters) { ... }'],
     ['cond', 'Flex conditional statement.\n\nUsage: cond (condition) { ... } [elif (condition) { ... }] [else { ... }]'],
     ['for', 'Flex for loop.\n\nUsage: for (initialization; condition; increment) { ... }'],
@@ -106,6 +106,19 @@ const flexDocumentation = new Map<string, string>([
     ['dorg', 'List/Array data type.\n\nUsage: dorg variableName = [value1, value2, ...]'],
     ['true', 'Boolean true value'],
     ['false', 'Boolean false value']
+]);
+
+const flexTypesDocumentation = new Map<string, string>([
+    ['int', 'Integer data type.\n\nUsage: int variableName = value'],
+    ['rakm', 'Integer data type.\n\nUsage: rakm variableName = value'],
+    ['float', 'Floating-point number data type.\n\nUsage: float variableName = value'],
+    ['kasr', 'Floating-point number data type.\n\nUsage: kasr variableName = value'],
+    ['string', 'String data type.\n\nUsage: string variableName = "value"'],
+    ['nass', 'String data type.\n\nUsage: nass variableName = "value"'],
+    ['bool', 'Boolean data type.\n\nUsage: bool variableName = true/false'],
+    ['so2al', 'Boolean data type.\n\nUsage: so2al variableName = true/false'],
+    ['list', 'List/Array data type.\n\nUsage: list variableName = [value1, value2, ...]'],
+    ['dorg', 'List/Array data type.\n\nUsage: dorg variableName = [value1, value2, ...]']
 ]);
 
 const flexBuiltinFunctionsDocumentation = new Map<string, string>([
@@ -498,7 +511,7 @@ connection.onHover((params: HoverParams): Hover | null => {
     
     // Check if it's a keyword
     if (flexKeywords.includes(word) || flexTypes.includes(word) || flexBuiltinFunctions.includes(word)) {
-        const documentation = flexDocumentation.get(word) || `Flex keyword: ${word}`;
+        const documentation = flexKeywordsDocumentation.get(word) || `Flex keyword: ${word}`;
         return {
             contents: {
                 kind: 'markdown',
@@ -768,89 +781,88 @@ connection.onCompletion(
                 data: `function_${func}`
             });
         });
+
+        // Add variables and functions from the current document
+        const text = document.getText();
+        const variableDeclarationRegex = /(rakm|kasr|nass|so2al|dorg)\s+(\w+)\s*=/g;
+        const functionDeclarationRegex = /(fun|sndo2)\s+(\w+)\s*\(/g;
+        
+        let match;
+        
+        // Find variable declarations
+        while ((match = variableDeclarationRegex.exec(text)) !== null) {
+            const varName = match[2];
+            const varType = match[1];
+            
+            // Avoid duplicates
+            if (!completionItems.some(item => item.label === varName)) {
+                completionItems.push({
+                    label: varName,
+                    kind: CompletionItemKind.Variable,
+                    detail: `${varType} variable`,
+                    data: `variable_${varName}`
+                });
+            }
+        }
+        
+        // Find function declarations
+        while ((match = functionDeclarationRegex.exec(text)) !== null) {
+            const funcName = match[2];
+            
+            // Avoid duplicates
+            if (!completionItems.some(item => item.label === funcName)) {
+                completionItems.push({
+                    label: funcName,
+                    kind: CompletionItemKind.Function,
+                    detail: 'User defined function',
+                    data: `function_${funcName}`
+                });
+            }
+        }
         
         return completionItems;
     }
 );
 
-// Completion item resolve to add more details
+// This handler resolves additional information for the item selected in the completion list
 connection.onCompletionResolve(
     (item: CompletionItem): CompletionItem => {
-        if (item.data?.startsWith('keyword_')) {
-            const keyword = item.data.replace('keyword_', '');
-            item.detail = `Flex keyword: ${keyword}`;
-            
-            // Add documentation based on keyword
-            switch (keyword) {
-                case 'fun':
-                case 'sndo2':
-                    item.documentation = 'Defines a function in Flex.';
-                    break;
-                case 'if':
-                case 'cond':
-                    item.documentation = 'Conditional statement in Flex.';
-                    break;
-                case 'for':
-                case 'loop':
-                case 'karr':
-                    item.documentation = 'Loop construct in Flex.';
-                    break;
-                case 'return':
-                case 'rg3':
-                    item.documentation = 'Returns a value from a function.';
-                    break;
-                default:
-                    item.documentation = `Flex keyword: ${keyword}`;
-            }
-        }
+        const dataParts = item.data.split('_');
+        const type = dataParts[0];
+        const value = dataParts.slice(1).join('_');
         
-        if (item.data?.startsWith('type_')) {
-            const type = item.data.replace('type_', '');
-            item.detail = `Flex type: ${type}`;
-            
-            // Add documentation based on type
-            switch (type) {
-                case 'int':
-                case 'rakm':
-                    item.documentation = 'Integer type in Flex.';
-                    break;
-                case 'float':
-                case 'kasr':
-                    item.documentation = 'Floating-point number type in Flex.';
-                    break;
-                case 'string':
-                case 'nass':
-                    item.documentation = 'String type in Flex.';
-                    break;
-                case 'bool':
-                case 'so2al':
-                    item.documentation = 'Boolean type in Flex.';
-                    break;
-                case 'list':
-                case 'dorg':
-                    item.documentation = 'List/Array type in Flex.';
-                    break;
-                default:
-                    item.documentation = `Flex type: ${type}`;
+        if (type === 'keyword') {
+            item.detail = 'Flex Keyword';
+            item.documentation = flexKeywordsDocumentation.get(value) || '';
+        } else if (type === 'type') {
+            item.detail = 'Flex Type';
+            item.documentation = flexTypesDocumentation.get(value) || '';
+        } else if (type === 'function') {
+            if (flexBuiltinFunctionsDocumentation.has(value)) {
+                item.detail = 'Flex Built-in Function';
+                item.documentation = flexBuiltinFunctionsDocumentation.get(value) || '';
+            } else {
+                item.detail = 'User Defined Function';
+                // For user defined functions, we don't have documentation
+                // We could try to extract the function signature here
+                item.documentation = 'User defined function';
             }
-        }
-        
-        if (item.data?.startsWith('function_')) {
-            const func = item.data.replace('function_', '');
-            item.detail = `Flex built-in function: ${func}`;
+        } else if (type === 'variable') {
+            // For variables, detail is already set in the completion provider
+            item.documentation = 'User defined variable';
             
-            // Add documentation based on function
-            switch (func) {
-                case 'print':
-                case 'etb3':
-                    item.documentation = 'Prints output to the console.';
-                    break;
-                case 'da5l':
-                case 'input':
-                    item.documentation = 'Gets input from the user.';
-                    break;
-                default:
-                    item.documentation = `Flex built-in function: ${func}`;
+            // Try to find the variable's value if possible
+            const uri = item.data.split('_')[2]; // Extract URI if it was added
+            if (uri) {
+                const document = documents.get(uri);
+                if (document) {
+                    const text = document.getText();
+                    const regex = new RegExp(`(rakm|kasr|nass|so2al|dorg)\\s+${value}\\s*=\\s*([^;\\n]+)`, 'g');
+                    const match = regex.exec(text);
+                    if (match) {
+                        item.documentation += `\nInitial value: ${match[2].trim()}`;
+                    }
+                }
             }
         }
         

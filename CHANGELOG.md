@@ -2,6 +2,30 @@
 
 All notable changes to the "vscode-flex" extension will be documented in this file.
 
+## [0.2.5] - 2023-08-10
+
+### Added
+- Cross-platform support improvements for Windows, macOS, and Linux
+- New status bar indicators showing the current Flex run status
+- Variable resolution for VS Code variables like `${workspaceFolder}` 
+- Support for multiple AI models (Qwen, OpenAI, LMStudio)
+- Automatic detection of Sindbad/Flex paths with user prompts
+- Enhanced error handling and reporting in the terminal
+
+### Improved
+- Path handling for cross-platform compatibility
+- AI environment configuration respects user preferences (USE_AI variable)
+- Unified run handler for better code organization
+- Better terminal integration with proper process management
+- Enhanced script generation for platform-specific nuances
+
+### Fixed
+- Fixed incorrect path resolution when running Flex files
+- Fixed status bar not updating properly after execution
+- Fixed process termination issues on Windows
+- Fixed incomplete comment block in extension.ts
+- Fixed environment variable handling to respect user settings
+
 ## [0.2.0] - 2023-07-15
 
 ### Added

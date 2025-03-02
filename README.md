@@ -1,91 +1,118 @@
-# Flex Language Support for VS Code
+# Flex Language Extension for VS Code
 
-This extension provides comprehensive language support for the Flex programming language, a flexible language designed to support multiple syntax styles, including Franko Arabic, English, and other common programming syntax conventions.
+This extension provides support for the Flex programming language in Visual Studio Code, including syntax highlighting, code completion, and execution of Flex programs.
 
 ## Features
 
-The Flex extension provides the following features:
+- Syntax highlighting for Flex files (.lx, .flex, .fx)
+- Run Flex programs directly from VS Code
+- Optional AI-assisted coding and error handling
+- Support for multiple AI models (Qwen, OpenAI, LMStudio)
+- Cross-platform support (Windows, macOS, Linux)
 
-### Syntax Highlighting
-Syntax highlighting for Flex language files (`.lx`, `.flex`, `.fx`).
+## Installation
 
-### Code Completion
-Intelligent code completion for Flex keywords, types, and built-in functions.
+### Prerequisites
 
-### Error Checking
-Real-time error checking and diagnostics for Flex code.
+1. Install [Visual Studio Code](https://code.visualstudio.com/)
+2. Install the [Flex Interpreter](https://flex-lang.org/download) for your operating system
+3. Install [Node.js](https://nodejs.org/) (required for running Flex scripts)
 
-### Go to Definition
-Navigate to the definition of variables, functions, and parameters.
+### Installing the Extension
 
-### Find References
-Find all references to a symbol throughout your code.
+1. Open VS Code
+2. Go to Extensions (Ctrl+Shift+X or Cmd+Shift+X)
+3. Search for "Flex Language"
+4. Click "Install"
 
-### Hover Information
-Hover over symbols to see type information and documentation.
+### Post-Installation Setup
 
-### Code Actions
-Quick fixes and refactoring options for common code issues.
+After installing the extension, you'll need to configure it:
 
-### Run and Debug
-Run Flex files directly from the editor with the Run button in the editor toolbar.
+1. Open VS Code settings (File > Preferences > Settings)
+2. Search for "flex" to find all Flex-related settings
+3. Set `flex.flexPath` to the directory containing your Flex interpreter's `main.py` file
+4. Optional: Configure AI settings if you want to use AI-assisted features
 
-### AI-Powered Features
-The extension includes several AI-powered features to help you write Flex code:
+## Common Installation Issues and Solutions
 
-- **Explain Code**: Select code and use the context menu to get an explanation of what the code does.
-- **Generate Code**: Generate Flex code based on a natural language description.
-- **Translate to Flex**: Translate code from other languages (JavaScript, Python, etc.) to Flex.
+### Windows Users
 
-## Getting Started
+Windows users may experience issues with script permissions or path resolution. If you encounter any issues:
 
-1. Install the Flex extension from the VS Code marketplace
-2. Open a Flex file (`.lx`, `.flex`, or `.fx`) or create a new one
-3. Start coding with full language support
+1. Run the Windows Fix Script:
+   - Download [windows-fix.js](https://github.com/flex-lang/vscode-flex/raw/main/windows-fix.js)
+   - Open a command prompt and navigate to the download directory
+   - Run `node windows-fix.js`
+
+2. Manual Fix (if the script doesn't work):
+   - Ensure PowerShell execution policy allows script execution:
+     ```powershell
+     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+     ```
+   - Verify Node.js is in your PATH environment variable
+   - Check that the Flex path in VS Code settings is correctly set
+
+### macOS and Linux Users
+
+If you experience permission issues on macOS or Linux:
+
+1. Make the script executable:
+   ```bash
+   chmod +x ~/.vscode/extensions/flex-language-*/run-flex.sh
+   ```
+
+2. If the extension can't find the Flex interpreter, set the path manually in VS Code settings:
+   - Go to Settings
+   - Find `flex.flexPath`
+   - Set it to the full path of your Flex interpreter directory
 
 ## Usage
 
-### Running Flex Code
-1. Open a Flex file (`.lx`, `.flex`, or `.fx`)
-2. Click the Run button in the editor toolbar or right-click and select "Run Flex File"
-3. The output will be displayed in a terminal window
+### Running Flex Programs
 
-### Using AI Features
-- **Explain Code**: Select code, right-click, and choose "Flex: Explain Code"
-- **Generate Code**: Right-click in the editor and select "Flex: Generate Code", then enter a description
-- **Translate to Flex**: Select code in another language, right-click, and choose "Flex: Translate to Flex"
+1. Open a Flex file (with extension .lx, .flex, or .fx)
+2. Use one of the following methods to run:
+   - Press F5 to run without AI
+   - Press Shift+F5 to run with AI assistance
+   - Use the Command Palette (Ctrl+Shift+P or Cmd+Shift+P) and select "Flex: Run File" or "Flex: Run File with AI"
 
-### Navigation
-- **Go to Definition**: Right-click on a symbol and select "Go to Definition" or press F12
-- **Find References**: Right-click on a symbol and select "Find All References" or press Shift+F12
+### Stopping Execution
 
-## Integration with Flex Interpreter
+- Press Shift+F6 or use the Command Palette and select "Flex: Stop Running"
 
-To fully utilize this extension with the Sindbad Flex language interpreter:
+### AI Configuration
 
-1. Configure the path to the Flex interpreter in VS Code settings:
-   - Open VS Code settings: `Ctrl+,` (or `Cmd+,` on Mac)
-   - Search for "Flex"
-   - Enter the path to the Flex interpreter in the "Flex > Path" setting
-   - Example: `/Users/username/Developer/python/grad/Sindbad/src/flex.sh`
+To use AI features with the extension:
 
-2. Configure environment for AI assistance:
-   - The extension can integrate with the Flex interpreter's AI assistance features
-   - Make sure the `USE_AI` environment variable is set correctly in your system
-   - The extension will use this to provide enhanced error handling and suggestions
+1. Enable AI in settings: Set `flex.ai.enable` to `true`
+2. Choose an AI model:
+   - **Qwen**: Default model, no additional setup required
+   - **OpenAI**: Requires an API key set in `flex.ai.apiKey`
+   - **LMStudio**: Requires LMStudio to be running locally, with the API URL set in `flex.ai.lmstudioUrl`
 
-3. Testing the integration:
-   - Open a Flex file (`.lx`, `.flex`, or `.fx`)
-   - Press `F5` or use Command Palette > `Flex: Run Current File`
-   - The file will be executed using the configured Flex interpreter
-   - Any output or errors will appear in the integrated terminal
+## Configuration Options
 
-4. Using AI-enhanced features:
-   - When errors occur in your code, the extension will use the Flex interpreter's AI capabilities to provide context-aware error messages and suggestions
-   - This is particularly helpful for learning the language or debugging complex issues
+| Setting | Description | Default Value |
+|---------|-------------|---------------|
+| `flex.path` | Path to the Flex runner script | `run-flex.js` |
+| `flex.flexPath` | Path to the Flex interpreter directory | `""` |
+| `flex.ai.enable` | Enable AI features | `false` |
+| `flex.ai.model` | AI model to use (qwen, openai, lmstudio) | `qwen` |
+| `flex.ai.apiKey` | API key for OpenAI | `""` |
+| `flex.ai.lmstudioUrl` | URL for LMStudio API | `http://localhost:1234/v1` |
 
-## Usage Examples
+## Known Issues
 
-### Formatting Code
+- The extension requires the Flex interpreter to be installed separately
+- AI features require specific model availability based on configuration
+- Terminal-based execution may behave differently across operating systems
+- Some special character escape sequences may not work correctly in all shells
 
-1. Use the keyboard shortcut `
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This extension is licensed under the MIT License. See the LICENSE file for details.

@@ -1,6 +1,8 @@
 {
     "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
     "name": "Flex",
+    "scopeName": "source.flex",
+    "fileTypes": ["lx", "flex", "fx"],
     "patterns": [
         {
             "include": "#comments"
@@ -12,38 +14,43 @@
             "include": "#strings"
         },
         {
-            "include": "#numbers"
-        },
-        {
-            "include": "#function_declarations"
-        },
-        {
-            "include": "#variable_declarations"
+            "include": "#constants"
         },
         {
             "include": "#operators"
         },
         {
-            "include": "#function_calls"
-        },
-        {
             "include": "#brackets"
         },
         {
-            "include": "#string_interpolation"
+            "include": "#storage"
+        },
+        {
+            "include": "#functions"
+        },
+        {
+            "include": "#imports"
+        },
+        {
+            "include": "#variables"
         }
     ],
     "repository": {
         "comments": {
             "patterns": [
                 {
-                    "name": "comment.line.double-slash.flex",
-                    "match": "//.*$"
+                    "name": "comment.block.flex",
+                    "begin": "/\\*|'''",
+                    "end": "\\*/|'''",
+                    "captures": {
+                        "0": {
+                            "name": "punctuation.definition.comment.flex"
+                        }
+                    }
                 },
                 {
-                    "name": "comment.block.flex",
-                    "begin": "/\\*",
-                    "end": "\\*/",
+                    "name": "comment.line.double-slash.flex",
+                    "match": "(//|#).*$",
                     "captures": {
                         "0": {
                             "name": "punctuation.definition.comment.flex"
@@ -55,213 +62,122 @@
         "keywords": {
             "patterns": [
                 {
-                    "name": "keyword.control.flex",
-                    "match": "\\b(if|else|elif|cond|for|while|return|rg3|break|continue|import|geeb)\\b"
+                    "name": "keyword.control.conditional.flex",
+                    "match": "\\b(if|cond|lw|elif|aw|else|otherwise|gher)\\b"
                 },
                 {
-                    "name": "storage.type.flex",
-                    "match": "\\b(int|rakm|float|kasr|string|nass|bool|so2al|list|dorg)\\b"
+                    "name": "keyword.control.loop.flex",
+                    "match": "\\b(while|loop|talama|talma|tlma|for|karr|l7d)\\b"
                 },
                 {
-                    "name": "constant.language.flex",
-                    "match": "\\b(true|false|null|nil)\\b"
+                    "name": "keyword.control.flow.flex",
+                    "match": "\\b(return|rg3|break|stop|w2f)\\b"
                 },
                 {
-                    "name": "support.function.flex",
-                    "match": "\\b(print|etb3|input|da5l)\\b"
+                    "name": "keyword.operator.logical.flex",
+                    "match": "\\b(and|or|not)\\b"
+                },
+                {
+                    "name": "constant.language.boolean.flex",
+                    "match": "\\b(true|false|9a7|53ta)\\b"
+                },
+                {
+                    "name": "keyword.other.io.flex",
+                    "match": "\\b(etb3|out|output|print|printf|cout|scan|read|input|da5l)\\b"
                 }
             ]
         },
         "strings": {
+            "name": "string.quoted.double.flex",
+            "begin": "\"",
+            "end": "\"",
             "patterns": [
                 {
-                    "name": "string.quoted.double.flex",
-                    "begin": "\"",
-                    "end": "\"",
-                    "patterns": [
-                        {
-                            "name": "constant.character.escape.flex",
-                            "match": "\\\\."
-                        },
-                        {
-                            "include": "#string_interpolation"
-                        }
-                    ]
-                },
-                {
-                    "name": "string.quoted.single.flex",
-                    "begin": "'",
-                    "end": "'",
-                    "patterns": [
-                        {
-                            "name": "constant.character.escape.flex",
-                            "match": "\\\\."
-                        }
-                    ]
+                    "name": "constant.character.escape.flex",
+                    "match": "\\\\."
                 }
             ]
         },
-        "string_interpolation": {
-            "name": "meta.string.interpolation.flex",
-            "begin": "\\{",
-            "end": "\\}",
-            "beginCaptures": {
-                "0": {
-                    "name": "punctuation.definition.template-expression.begin.flex"
-                }
-            },
-            "endCaptures": {
-                "0": {
-                    "name": "punctuation.definition.template-expression.end.flex"
-                }
-            },
+        "constants": {
             "patterns": [
                 {
-                    "include": "#variable_declarations"
-                },
-                {
-                    "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b",
-                    "name": "variable.other.flex"
+                    "name": "constant.numeric.flex",
+                    "match": "\\b\\d+(\\.\\d+)?\\b"
                 }
             ]
-        },
-        "numbers": {
-            "patterns": [
-                {
-                    "name": "constant.numeric.integer.flex",
-                    "match": "\\b[0-9]+\\b"
-                },
-                {
-                    "name": "constant.numeric.float.flex",
-                    "match": "\\b[0-9]+\\.[0-9]+\\b"
-                },
-                {
-                    "name": "constant.numeric.hex.flex",
-                    "match": "\\b0x[0-9a-fA-F]+\\b"
-                },
-                {
-                    "name": "constant.numeric.binary.flex",
-                    "match": "\\b0b[01]+\\b"
-                }
-            ]
-        },
-        "function_declarations": {
-            "patterns": [
-                {
-                    "name": "meta.function.flex",
-                    "begin": "\\b(fun|sndo2)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(",
-                    "beginCaptures": {
-                        "1": {
-                            "name": "storage.type.function.flex"
-                        },
-                        "2": {
-                            "name": "entity.name.function.flex"
-                        }
-                    },
-                    "end": "\\)",
-                    "patterns": [
-                        {
-                            "include": "#parameter_declarations"
-                        }
-                    ]
-                }
-            ]
-        },
-        "parameter_declarations": {
-            "patterns": [
-                {
-                    "match": "\\b(int|rakm|float|kasr|string|nass|bool|so2al|list|dorg)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\b",
-                    "captures": {
-                        "1": {
-                            "name": "storage.type.flex"
-                        },
-                        "2": {
-                            "name": "variable.parameter.flex"
-                        }
-                    }
-                },
-                {
-                    "name": "variable.parameter.flex",
-                    "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b"
-                }
-            ]
-        },
-        "variable_declarations": {
-            "patterns": [
-                {
-                    "name": "meta.variable.declaration.flex",
-                    "match": "\\b(int|rakm|float|kasr|string|nass|bool|so2al|list|dorg)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\b",
-                    "captures": {
-                        "1": {
-                            "name": "storage.type.flex"
-                        },
-                        "2": {
-                            "name": "variable.other.flex"
-                        }
-                    }
-                },
-                {
-                    "name": "meta.variable.declaration.commented.flex",
-                    "match": "//\\s*(int|rakm|float|kasr|string|nass|bool|so2al|list|dorg)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\b",
-                    "captures": {
-                        "0": {
-                            "name": "comment.line.double-slash.flex"
-                        },
-                        "1": {
-                            "name": "storage.type.flex"
-                        },
-                        "2": {
-                            "name": "variable.other.flex"
-                        }
-                    }
-                }
-            ]
-        },
-        "function_calls": {
-            "name": "meta.function-call.flex",
-            "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(",
-            "captures": {
-                "1": {
-                    "name": "entity.name.function.flex"
-                }
-            }
         },
         "operators": {
             "patterns": [
                 {
-                    "name": "keyword.operator.arithmetic.flex",
-                    "match": "[+\\-*/%]|\\+\\+|\\-\\-"
-                },
-                {
                     "name": "keyword.operator.comparison.flex",
-                    "match": "==|!=|<=|>=|<|>"
-                },
-                {
-                    "name": "keyword.operator.logical.flex",
-                    "match": "&&|\\|\\||!"
+                    "match": "(==|!=|>=|=>|<=|=<|>|<)"
                 },
                 {
                     "name": "keyword.operator.assignment.flex",
-                    "match": "=|\\+=|\\-=|\\*=|\\/=|%="
+                    "match": "="
+                },
+                {
+                    "name": "keyword.operator.arithmetic.flex",
+                    "match": "(\\+\\+|--|\\+|-|\\*|/)"
                 }
             ]
         },
         "brackets": {
             "patterns": [
                 {
-                    "name": "punctuation.definition.block.flex",
-                    "match": "[\\{\\}]"
+                    "name": "punctuation.section.brackets.flex",
+                    "match": "[\\[\\]\\(\\)\\{\\}]"
                 },
                 {
-                    "name": "punctuation.definition.parameters.flex",
-                    "match": "[\\(\\)]"
+                    "name": "punctuation.separator.flex",
+                    "match": "[,;]"
+                }
+            ]
+        },
+        "storage": {
+            "patterns": [
+                {
+                    "name": "storage.type.flex",
+                    "match": "\\b(int|rakm|float|3jfa|kasr|bool|mnt5k|so2al|string|7arf|klma|list|dorg)\\b"
+                }
+            ]
+        },
+        "functions": {
+            "patterns": [
+                {
+                    "name": "entity.name.function.flex",
+                    "match": "\\b(fun|sndo2|sando2|fn|function)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(",
+                    "captures": {
+                        "1": {
+                            "name": "storage.type.function.flex"
+                        },
+                        "2": {
+                            "name": "entity.name.function.flex"
+                        }
+                    }
                 },
                 {
-                    "name": "punctuation.definition.array.flex",
-                    "match": "[\\[\\]]"
+                    "name": "support.function.list.flex",
+                    "match": "\\.(?:append|push|pop|remove|delete)\\b"
+                }
+            ]
+        },
+        "imports": {
+            "patterns": [
+                {
+                    "name": "keyword.control.import.flex",
+                    "match": "\\b(geep|geeb|import)\\b"
+                }
+            ]
+        },
+        "variables": {
+            "patterns": [
+                {
+                    "name": "variable.other.flex",
+                    "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
                 }
             ]
         }
-    },
-    "scopeName": "source.flex"
+    }
 }
+

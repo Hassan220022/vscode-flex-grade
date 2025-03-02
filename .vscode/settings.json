@@ -1,5 +1,10 @@
 {
-    "flex.path": "${workspaceFolder}/run-flex.js",
+    "flex.path": "run-flex.js",
+    "flex.flexPath": "",
+    "flex.ai.enable": false,
     "flex.ai.model": "qwen",
-    "flex.ai.enable": true
+    "flex.ai.apiKey": "",
+    "flex.ai.lmstudioUrl": "http://localhost:1234/v1",
+    "cursor.terminal.usePreviewBox": true,
+    "terminal.integrated.stickyScroll.enabled": true
 } 

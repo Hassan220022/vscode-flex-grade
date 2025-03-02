@@ -2,7 +2,7 @@
   "name": "flex-language",
   "displayName": "Flex Programming Language",
   "description": "Language support for the Flex programming language",
-  "version": "0.2.1",
+  "version": "0.2.5",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -53,11 +53,7 @@
       },
       {
         "command": "flex.run",
-        "title": "Flex: Run Current File",
-        "icon": {
-          "light": "resources/light/run.svg",
-          "dark": "resources/dark/run.svg"
-        }
+        "title": "Flex: Run File"
       },
       {
         "command": "flex.lint",
@@ -73,11 +69,7 @@
       },
       {
         "command": "flex.runWithAI",
-        "title": "Flex: Run with AI Error Handling",
-        "icon": {
-          "light": "resources/light/ai.svg",
-          "dark": "resources/dark/ai.svg"
-        }
+        "title": "Flex: Run File with AI"
       },
       {
         "command": "flex.createNewFile",
@@ -101,11 +93,7 @@
       },
       {
         "command": "flex.stopRun",
-        "title": "Stop Flex Run",
-        "icon": {
-          "light": "resources/light/stop.svg",
-          "dark": "resources/dark/stop.svg"
-        }
+        "title": "Flex: Stop Running"
       },
       {
         "command": "flex.aiExplain",
@@ -135,31 +123,31 @@
     "menus": {
       "editor/title": [
         {
-          "command": "flex.run",
+          "command": "flex.runFile",
           "when": "editorLangId == flex",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "flex.runWithAI",
           "when": "editorLangId == flex",
-          "group": "navigation"
-        },
-        {
-          "command": "flex.runFile",
-          "when": "editorLangId == flex",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "command": "flex.stopRun",
           "when": "flexRunning",
-          "group": "navigation"
+          "group": "navigation@3"
         }
       ],
       "editor/context": [
         {
-          "command": "flex.run",
+          "command": "flex.runFile",
           "when": "editorLangId == flex",
-          "group": "1_run"
+          "group": "flex@1"
+        },
+        {
+          "command": "flex.runWithAI",
+          "when": "editorLangId == flex",
+          "group": "flex@2"
         },
         {
           "command": "flex.format",
@@ -185,11 +173,6 @@
           "command": "flex.findReferences",
           "when": "editorLangId == flex",
           "group": "3_navigation"
-        },
-        {
-          "command": "flex.runFile",
-          "when": "editorLangId == flex",
-          "group": "flex"
         },
         {
           "command": "flex.aiExplain",
@@ -254,7 +237,7 @@
       }
     ],
     "configuration": {
-      "title": "Flex",
+      "title": "Flex Language",
       "properties": {
         "flex.linting.enable": {
           "type": "boolean",
@@ -293,24 +276,34 @@
         },
         "flex.path": {
           "type": "string",
+          "default": "run-flex.js",
+          "description": "Path to the Flex runner script"
+        },
+        "flex.flexPath": {
+          "type": "string",
           "default": "",
-          "description": "Path to the Flex compiler/interpreter executable"
+          "description": "Path to the Flex interpreter directory"
         },
         "flex.ai.enable": {
           "type": "boolean",
-          "default": true,
-          "description": "Enable or disable AI-assisted error handling"
+          "default": false,
+          "description": "Enable AI features"
         },
         "flex.ai.model": {
           "type": "string",
-          "enum": ["qwen", "openai"],
+          "enum": ["openai-gpt4o-mini", "openai", "qwen", "lmstudio"],
           "default": "qwen",
-          "description": "AI model to use for error handling (qwen for local, openai for cloud)"
+          "description": "AI model to use (openai-gpt4o-mini is recommended)"
         },
         "flex.ai.apiKey": {
           "type": "string",
           "default": "",
-          "description": "API key for OpenAI (only needed if using the openai model)"
+          "description": "API key for OpenAI (if using OpenAI model)"
+        },
+        "flex.ai.lmstudioUrl": {
+          "type": "string",
+          "default": "http://localhost:1234/v1",
+          "description": "URL for LMStudio API (if using LMStudio model)"
         },
         "flex.debug.enable": {
           "type": "boolean",
