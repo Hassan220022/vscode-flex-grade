@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Set AI environment variables
+export USE_AI=true
+export FLEX_AI_MODEL=qwen
+
 # Path to the Sindbad directory
 SINDBAD_DIR="/Users/mikawi/Developer/python/grad/Sindbad/src"
 

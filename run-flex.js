@@ -28,24 +28,22 @@ try {
     process.exit(1);
 }
 
-// Determine the OS
-const platform = os.platform();
-const isWindows = platform === 'win32';
+// Determine platform
+const isWindows = os.platform() === 'win32';
 
 // Get the directory where this script is located
-const scriptDir = __dirname;
+const scriptDir = path.dirname(path.resolve(__dirname, process.argv[1]));
 
-// Get Sindbad directory path from settings or default
+// Get the Sindbad directory path
 let sindbadDir = '';
+
+// Check for AI settings
+const useAI = process.env.USE_AI === 'true';
+const aiModel = process.env.FLEX_AI_MODEL || 'qwen';
+
+// Read settings from .vscode/settings.json
 try {
-    // Try to read the settings.json file
-    // First check in the current working directory
-    let settingsPath = path.join(process.cwd(), '.vscode', 'settings.json');
-    
-    // If not found, try in the script directory
-    if (!fs.existsSync(settingsPath)) {
-        settingsPath = path.join(scriptDir, '.vscode', 'settings.json');
-    }
+    const settingsPath = path.join(scriptDir, '.vscode', 'settings.json');
     
     if (fs.existsSync(settingsPath)) {
         const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
@@ -71,9 +69,25 @@ const updatePlatformScript = () => {
     try {
         if (isWindows) {
             const batScriptPath = path.join(scriptDir, 'run-flex.bat');
+            
+            // Set environment variables for AI
+            let envSetup = '';
+            if (useAI) {
+                envSetup = `REM Set AI environment variables
+SET USE_AI=true
+SET FLEX_AI_MODEL=${aiModel}
+`;
+                console.log(`Running with AI using model: ${aiModel}`);
+            } else {
+                envSetup = `REM Set AI environment variables
+SET USE_AI=false
+`;
+            }
+            
             let batScript = `@echo off
 REM Windows batch file to run Flex programs
 
+${envSetup}
 REM Path to the Sindbad directory
 SET SINDBAD_DIR=${sindbadDir.replace(/\\/g, '\\\\')}
 
@@ -87,8 +101,24 @@ python main.py "${absoluteInputPath.replace(/\\/g, '\\\\')}"`;
             console.log(`Updated Windows script at: ${batScriptPath}`);
         } else {
             const shScriptPath = path.join(scriptDir, 'run-flex.sh');
+            
+            // Set environment variables for AI
+            let envSetup = '';
+            if (useAI) {
+                envSetup = `# Set AI environment variables
+export USE_AI=true
+export FLEX_AI_MODEL=${aiModel}
+`;
+                console.log(`Running with AI using model: ${aiModel}`);
+            } else {
+                envSetup = `# Set AI environment variables
+export USE_AI=false
+`;
+            }
+            
             let shScript = `#!/bin/bash
 
+${envSetup}
 # Path to the Sindbad directory
 SINDBAD_DIR="${sindbadDir.replace(/"/g, '\\"')}"
 
@@ -97,6 +127,9 @@ cd "$SINDBAD_DIR"
 
 # Run the Flex interpreter with the absolute path
 python3 main.py "${absoluteInputPath.replace(/"/g, '\\"')}"`;
+
+            // Ensure there's no % character at the end
+            shScript = shScript.replace(/%$/, '');
 
             fs.writeFileSync(shScriptPath, shScript);
             fs.chmodSync(shScriptPath, '755');

@@ -2,7 +2,7 @@
   "name": "flex-language",
   "displayName": "Flex Programming Language",
   "description": "Language support for the Flex programming language",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -69,7 +69,11 @@
       },
       {
         "command": "flex.runWithAI",
-        "title": "Flex: Run File with AI"
+        "title": "Flex: Run File with AI",
+        "icon": {
+          "light": "resources/light/ai.svg",
+          "dark": "resources/dark/ai.svg"
+        }
       },
       {
         "command": "flex.createNewFile",

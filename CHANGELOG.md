@@ -2,6 +2,17 @@
 
 All notable changes to the "vscode-flex" extension will be documented in this file.
 
+## [0.2.6] - 2023-08-15
+
+### Added
+- Added icon for "Run File with AI" button in the editor toolbar
+- Improved AI integration with proper environment variable handling
+
+### Fixed
+- Fixed "Run File with AI" button appearance and functionality
+- Fixed issue with % character appearing at the end of generated shell scripts
+- Ensured AI mode properly passes environment variables to the Flex interpreter
+
 ## [0.2.5] - 2023-08-10
 
 ### Added
