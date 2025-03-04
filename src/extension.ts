@@ -1911,9 +1911,10 @@ async function checkFlexPath(context: ExtensionContext): Promise<boolean> {
     let flexPath = config.get<string>('flexPath', '');
     
     if (!flexPath) {
+        const choices = ['Set Path', 'Download Flex', 'Not Now'];
         const choice = await vscode.window.showInformationMessage(
-            'Flex interpreter path is not set. Would you like to set it now?',
-            'Set Path', 'Not Now'
+            'Flex interpreter is not found. Would you like to download it or set the path manually?',
+            ...choices
         );
         
         if (choice === 'Set Path') {
@@ -1946,12 +1947,226 @@ async function checkFlexPath(context: ExtensionContext): Promise<boolean> {
                 vscode.window.showErrorMessage('Flex path is required to run Flex files');
                 return false;
             }
+        } else if (choice === 'Download Flex') {
+            // Offer to download Flex based on platform
+            return await promptFlexDownload(context);
         } else {
             return false;
         }
     }
     
     return true;
+}
+
+/**
+ * Prompt user to download the Flex interpreter
+ */
+async function promptFlexDownload(context: ExtensionContext): Promise<boolean> {
+    const platform = os.platform();
+    let downloadUrl = '';
+    let installerName = '';
+    
+    // Get the latest release info
+    try {
+        const latestRelease = await getLatestReleaseInfo();
+        if (!latestRelease) {
+            throw new Error('Could not fetch latest release information');
+        }
+        
+        if (platform === 'win32') {
+            downloadUrl = latestRelease.windows;
+            installerName = 'flex-installer-win.exe';
+        } else if (platform === 'darwin') {
+            downloadUrl = latestRelease.macos;
+            installerName = 'flex-installer-mac.pkg';
+        } else {
+            downloadUrl = latestRelease.linux;
+            installerName = 'flex-installer-linux.rpm';
+        }
+        
+        // If we couldn't get a download URL, open the releases page instead
+        if (!downloadUrl) {
+            const result = await vscode.window.showInformationMessage(
+                'Could not automatically find the installer for your platform. Would you like to open the releases page?',
+                'Open Releases Page', 'Cancel'
+            );
+            
+            if (result === 'Open Releases Page') {
+                vscode.env.openExternal(vscode.Uri.parse('https://github.com/mikawi/flex/releases'));
+            }
+            return false;
+        }
+        
+        // Show download progress
+        const downloadResult = await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Downloading Flex installer...`,
+            cancellable: true
+        }, async (progress, token) => {
+            // Create download directory
+            const downloadDir = path.join(os.tmpdir(), 'flex-download');
+            fs.mkdirSync(downloadDir, { recursive: true });
+            const installerPath = path.join(downloadDir, installerName);
+            
+            try {
+                // Download the installer
+                await downloadFile(downloadUrl, installerPath, progress);
+                return installerPath;
+            } catch (err: any) {
+                console.error('Download failed:', err);
+                vscode.window.showErrorMessage(`Failed to download Flex: ${err.message}`);
+                return null;
+            }
+        });
+        
+        if (!downloadResult) {
+            return false;
+        }
+        
+        // Run the installer
+        const installResult = await vscode.window.showInformationMessage(
+            'Flex installer downloaded. Would you like to run it now?',
+            'Run Installer', 'Cancel'
+        );
+        
+        if (installResult === 'Run Installer') {
+            // Run the installer based on platform
+            let installProcess: cp.ChildProcess;
+            
+            if (platform === 'win32') {
+                installProcess = cp.spawn(downloadResult, [], { detached: true, stdio: 'ignore' });
+            } else if (platform === 'darwin') {
+                installProcess = cp.spawn('open', [downloadResult], { detached: true, stdio: 'ignore' });
+            } else {
+                // For Linux, we might need sudo
+                vscode.window.showInformationMessage(
+                    'Please run the downloaded installer with sudo permissions from your terminal.',
+                    { modal: true }
+                );
+                
+                // Open the directory containing the installer
+                cp.spawn('xdg-open', [path.dirname(downloadResult)], { detached: true, stdio: 'ignore' });
+            }
+            
+            // After installation, check if Flex path exists in common locations
+            vscode.window.showInformationMessage(
+                'After installation completes, please restart VS Code for the changes to take effect.'
+            );
+            
+            return true;
+        }
+    } catch (error: any) {
+        console.error('Error during download process:', error);
+        vscode.window.showErrorMessage(`Error downloading Flex: ${error.message}`);
+        return false;
+    }
+    
+    return false;
+}
+
+/**
+ * Get information about the latest release from GitHub
+ */
+async function getLatestReleaseInfo(): Promise<{ version: string, windows: string, macos: string, linux: string } | null> {
+    return new Promise((resolve, reject) => {
+        const options = {
+            hostname: 'api.github.com',
+            path: '/repos/mikawi/flex/releases/latest',
+            headers: {
+                'User-Agent': 'VS Code Flex Extension'
+            },
+            method: 'GET'
+        };
+        
+        const req = http.request(options, (res) => {
+            let data = '';
+            
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+            
+            res.on('end', () => {
+                if (res.statusCode !== 200) {
+                    console.error(`GitHub API returned status code ${res.statusCode}`);
+                    reject(new Error(`GitHub API returned status code ${res.statusCode}`));
+                    return;
+                }
+                
+                try {
+                    const release = JSON.parse(data);
+                    const result = {
+                        version: release.tag_name,
+                        windows: '',
+                        macos: '',
+                        linux: ''
+                    };
+                    
+                    // Find asset URLs for each platform
+                    for (const asset of release.assets) {
+                        if (asset.name.includes('win.exe')) {
+                            result.windows = asset.browser_download_url;
+                        } else if (asset.name.includes('mac.pkg')) {
+                            result.macos = asset.browser_download_url;
+                        } else if (asset.name.includes('linux.rpm')) {
+                            result.linux = asset.browser_download_url;
+                        }
+                    }
+                    
+                    resolve(result);
+                } catch (err) {
+                    console.error('Error parsing GitHub response:', err);
+                    reject(err);
+                }
+            });
+        });
+        
+        req.on('error', (err) => {
+            console.error('Error fetching release info:', err);
+            reject(err);
+        });
+        
+        req.end();
+    });
+}
+
+/**
+ * Download a file from a URL to a local path with progress reporting
+ */
+async function downloadFile(url: string, destination: string, progress?: vscode.Progress<{ message?: string; increment?: number }>): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const file = fs.createWriteStream(destination);
+        
+        http.get(url, (response) => {
+            if (response.statusCode !== 200) {
+                reject(new Error(`Failed to download, status code: ${response.statusCode}`));
+                return;
+            }
+            
+            const totalSize = parseInt(response.headers['content-length'] || '0', 10);
+            let downloadedSize = 0;
+            
+            response.on('data', (chunk) => {
+                downloadedSize += chunk.length;
+                if (progress && totalSize > 0) {
+                    const percent = Math.round((downloadedSize / totalSize) * 100);
+                    progress.report({
+                        message: `${percent}% (${Math.round(downloadedSize / 1024 / 1024)}MB / ${Math.round(totalSize / 1024 / 1024)}MB)`,
+                        increment: 100 / (totalSize / chunk.length)
+                    });
+                }
+            });
+            
+            response.pipe(file);
+            
+            file.on('finish', () => {
+                file.close();
+                resolve();
+            });
+        }).on('error', (err) => {
+            fs.unlink(destination, () => {});
+            reject(err);
+        });
+    });
 }
 
 /**
